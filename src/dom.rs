@@ -15,7 +15,7 @@ struct ElementData {
     attrs: AttrMap,
 }
 
-type AttrMap = HashMap<String, String>;
+pub type AttrMap = HashMap<String, String>;
 
 // to create new nodes
 pub fn text(data: String) -> Node {

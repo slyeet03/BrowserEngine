@@ -1,4 +1,20 @@
-use crate::dom::{self, Node};
+use crate::dom::{self, AttrMap, Node, elem};
+use std::collections::HashMap;
+
+pub fn parse(source: String) -> Node {
+    let mut nodes = Parser {
+        pos: 0,
+        input: source,
+    }
+    .parse_nodes();
+
+    //incase head tag or body tag is outside the html tag put that shit under the html tag
+    if nodes.len() == 1 {
+        return nodes.remove(0);
+    } else {
+        return elem("html".to_string(), HashMap::new(), nodes);
+    }
+}
 
 struct Parser {
     pos: usize,
@@ -87,5 +103,50 @@ impl Parser {
         self.expect(">");
 
         return dom::elem(tag_name, attrs, children);
+    }
+
+    //parse id
+    fn parse_attr(&mut self) -> (String, String) {
+        let name = self.parse_name();
+        self.expect("=");
+        let value = self.parse_attr_value();
+        return (name, value);
+    }
+
+    //parse value between ""
+    fn parse_attr_value(&mut self) -> String {
+        let open_quote = self.consume_char();
+        assert!(open_quote == '"' || open_quote == '\'');
+        let value = self.consume_while(|c| c != open_quote);
+        let close_quote = self.consume_char();
+        assert_eq!(open_quote, close_quote);
+        return value;
+    }
+
+    //parse all the id names in a tag
+    fn parse_attributes(&mut self) -> AttrMap {
+        let mut attributes = HashMap::new();
+        loop {
+            self.consume_whitespace();
+            if self.next_char() == '>' {
+                break;
+            }
+            let (name, value) = self.parse_attr();
+            attributes.insert(name, value);
+        }
+        return attributes;
+    }
+
+    //parse nodes
+    fn parse_nodes(&mut self) -> Vec<Node> {
+        let mut nodes = Vec::new();
+        loop {
+            self.consume_whitespace();
+            if self.eof() || self.starts_with("</") {
+                break;
+            }
+            nodes.push(self.parse_node());
+        }
+        return nodes;
     }
 }
